@@ -1,0 +1,519 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Portal Nilai & Peringkat IPA - Santri Al-Matalab</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Font Awesome Icons -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <!-- SheetJS (XLSX) Library untuk Membaca File Excel -->
+    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap');
+        body { font-family: 'Plus Jakarta Sans', sans-serif; }
+    </style>
+</head>
+<body class="bg-slate-50 text-slate-800 min-h-screen flex flex-col justify-between">
+
+    <!-- HEADER / NAVBAR -->
+    <header class="bg-emerald-700 text-white shadow-lg sticky top-0 z-50">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 py-4 flex justify-between items-center">
+            <div class="flex items-center space-x-3">
+                <div class="bg-white text-emerald-700 p-2.5 rounded-xl font-bold text-xl shadow-md">
+                    <i class="fa-solid fa-atom"></i>
+                </div>
+                <div>
+                    <h1 class="text-lg sm:text-xl font-extrabold tracking-tight">Portal Nilai IPA Al-Matalab</h1>
+                    <p class="text-xs text-emerald-200">Pusat Informasi Hasil Evaluasi & Peringkat Santri</p>
+                </div>
+            </div>
+            <div>
+                <button onclick="openAdminModal()" class="bg-emerald-800 hover:bg-emerald-900 border border-emerald-600 text-emerald-100 text-xs sm:text-sm font-semibold px-4 py-2 rounded-xl transition flex items-center space-x-2 shadow">
+                    <i class="fa-solid fa-user-lock"></i>
+                    <span>Panel Admin</span>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- MAIN CONTAINER -->
+    <main class="max-w-4xl mx-auto px-4 py-10 flex-grow w-full">
+
+        <!-- SEARCH SECTION -->
+        <div id="searchSection" class="bg-white rounded-3xl shadow-xl p-6 sm:p-10 border border-slate-100 text-center space-y-6">
+            <div class="inline-flex p-3 bg-emerald-100 text-emerald-700 rounded-2xl mb-2">
+                <i class="fa-solid fa-magnifying-glass text-2xl"></i>
+            </div>
+            <h2 class="text-2xl sm:text-3xl font-extrabold text-slate-800">Cek Nilai & Peringkat IPA</h2>
+            <p class="text-slate-500 text-sm max-w-md mx-auto">Masukkan Nama Lengkap atau Nomor Induk Santri (NIS) untuk melihat rapor hasil evaluasi belajar.</p>
+
+            <div class="relative max-w-lg mx-auto">
+                <input type="text" id="searchInput" onkeyup="handleSearchKey(event)" placeholder="Ketik Nama atau NIS Santri..." class="w-full pl-12 pr-28 py-4 rounded-2xl border-2 border-slate-200 focus:border-emerald-500 focus:outline-none focus:ring-4 focus:ring-emerald-500/10 text-slate-700 font-medium transition shadow-sm text-base">
+                <div class="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400">
+                    <i class="fa-solid fa-search text-lg"></i>
+                </div>
+                <button onclick="searchStudent()" class="absolute right-2 top-1/2 -translate-y-1/2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold px-5 py-2.5 rounded-xl text-sm transition shadow-md">
+                    Cari
+                </button>
+            </div>
+
+            <p id="totalStudentCount" class="text-xs text-slate-400 font-medium pt-2">Total Santri Terdaftar: 0 orang</p>
+        </div>
+
+        <!-- RESULT CARD SECTION -->
+        <div id="resultCard" class="hidden bg-white rounded-3xl shadow-2xl overflow-hidden border border-slate-100 space-y-0 mt-8 transition-all">
+            <div class="bg-gradient-to-r from-emerald-600 to-teal-700 p-6 sm:p-8 text-white relative">
+                <button onclick="closeResult()" class="absolute top-4 right-4 bg-white/20 hover:bg-white/30 text-white w-9 h-9 rounded-full flex items-center justify-center transition">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                    <div>
+                        <span class="bg-emerald-800/80 text-emerald-200 text-xs font-bold px-3 py-1 rounded-full uppercase tracking-wider">Kartu Hasil Evaluasi</span>
+                        <h3 id="resName" class="text-2xl sm:text-3xl font-black mt-2">Nama Santri</h3>
+                        <p id="resNisClass" class="text-emerald-100 text-sm mt-0.5">NIS: - | Kelas: -</p>
+                    </div>
+                    <div class="bg-white text-slate-800 p-4 rounded-2xl text-center shadow-lg self-start sm:self-auto min-w-[120px]">
+                        <p class="text-[10px] font-bold uppercase tracking-widest text-slate-400">Peringkat</p>
+                        <p id="resRank" class="text-3xl font-black text-emerald-600">#1</p>
+                        <p id="resTotalRank" class="text-[11px] text-slate-500 font-medium">dari - santri</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="p-6 sm:p-8 space-y-6">
+                <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                    <div class="bg-slate-50 p-4 rounded-2xl border border-slate-100 text-center">
+                        <p class="text-xs text-slate-400 font-bold uppercase tracking-wider">Nilai Akhir IPA</p>
+                        <p id="resScore" class="text-4xl font-extrabold text-slate-800 mt-1">0</p>
+                        <span id="resGradeBadge" class="inline-block text-xs font-bold px-2.5 py-0.5 rounded-md mt-2">Predikat</span>
+                    </div>
+                    <div class="bg-slate-50 p-4 rounded-2xl border border-slate-100 text-center">
+                        <p class="text-xs text-slate-400 font-bold uppercase tracking-wider">Jawaban Benar</p>
+                        <p id="resCorrect" class="text-4xl font-extrabold text-emerald-600 mt-1">0</p>
+                        <p class="text-xs text-slate-500 mt-2 font-medium">Soal</p>
+                    </div>
+                    <div class="bg-slate-50 p-4 rounded-2xl border border-slate-100 text-center">
+                        <p class="text-xs text-slate-400 font-bold uppercase tracking-wider">Jawaban Salah</p>
+                        <p id="resWrong" class="text-4xl font-extrabold text-rose-500 mt-1">0</p>
+                        <p class="text-xs text-slate-500 mt-2 font-medium">Soal</p>
+                    </div>
+                </div>
+
+                <div class="space-y-4 pt-2">
+                    <h4 class="text-sm font-bold text-slate-800 uppercase tracking-wider flex items-center">
+                        <i class="fa-solid fa-address-card text-emerald-600 mr-2"></i> Biodata & Catatan Evaluasi
+                    </h4>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm bg-slate-50/60 p-4 rounded-2xl border border-slate-100">
+                        <div>
+                            <p class="text-slate-400 text-xs">Mata Pelajaran</p>
+                            <p class="font-semibold text-slate-700">Ilmu Pengetahuan Alam (IPA)</p>
+                        </div>
+                        <div>
+                            <p class="text-slate-400 text-xs">Tanggal Ujian / Update</p>
+                            <p id="resDate" class="font-semibold text-slate-700">-</p>
+                        </div>
+                        <div class="sm:col-span-2">
+                            <p class="text-slate-400 text-xs">Catatan Pembimbing / Guru</p>
+                            <p id="resNotes" class="font-medium text-slate-700 italic mt-0.5">"- "</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="text-center pt-2">
+                    <button onclick="closeResult()" class="text-emerald-600 hover:text-emerald-700 text-sm font-bold inline-flex items-center">
+                        <i class="fa-solid fa-arrow-left mr-2"></i> Cari Santri Lain
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- NOT FOUND ALERT -->
+        <div id="notFoundAlert" class="hidden bg-rose-50 border border-rose-200 text-rose-700 rounded-2xl p-6 text-center space-y-2 mt-6">
+            <i class="fa-solid fa-circle-exclamation text-3xl text-rose-500"></i>
+            <h4 class="font-bold text-lg">Data Santri Tidak Ditemukan</h4>
+            <p class="text-xs text-rose-600 max-w-sm mx-auto">Pastikan penulisan Nama atau NIS sudah sesuai dengan data yang terdaftar di sistem.</p>
+        </div>
+
+    </main>
+
+    <!-- ADMIN LOGIN MODAL -->
+    <div id="loginModal" class="hidden fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+        <div class="bg-white rounded-3xl shadow-2xl max-w-md w-full p-6 sm:p-8 space-y-6 relative border border-slate-100">
+            <button onclick="closeAdminModal()" class="absolute top-4 right-4 text-slate-400 hover:text-slate-600 w-8 h-8 rounded-full flex items-center justify-center">
+                <i class="fa-solid fa-xmark text-lg"></i>
+            </button>
+            <div class="text-center space-y-2">
+                <div class="w-14 h-14 bg-emerald-100 text-emerald-700 rounded-2xl flex items-center justify-center mx-auto text-2xl font-bold">
+                    <i class="fa-solid fa-lock"></i>
+                </div>
+                <h3 class="text-xl font-extrabold text-slate-800">Keamanan Panel Admin</h3>
+                <p class="text-xs text-slate-500">Masukkan kata sandi untuk mengelola data nilai dan upload berkas Excel.</p>
+            </div>
+
+            <form onsubmit="handleAdminLogin(event)" class="space-y-4">
+                <div>
+                    <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">Kata Sandi (Password)</label>
+                    <input type="password" id="adminPasswordInput" required placeholder="Masukkan kata sandi..." class="w-full px-4 py-3 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-emerald-500 transition text-sm">
+                </div>
+                <button type="submit" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-3 rounded-xl shadow-lg shadow-emerald-600/30 transition text-sm">
+                    Masuk ke Dashboard Admin
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <!-- ADMIN DASHBOARD MODAL -->
+    <div id="adminDashboardModal" class="hidden fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 overflow-y-auto">
+        <div class="bg-white rounded-3xl shadow-2xl max-w-4xl w-full p-6 sm:p-8 space-y-6 my-8 border border-slate-100 max-h-[90vh] overflow-y-auto">
+            
+            <div class="flex justify-between items-center border-b border-slate-100 pb-4">
+                <div class="flex items-center space-x-3">
+                    <div class="bg-emerald-600 text-white p-2.5 rounded-xl font-bold text-lg">
+                        <i class="fa-solid fa-sliders"></i>
+                    </div>
+                    <div>
+                        <h3 class="text-xl font-extrabold text-slate-800">Panel Kelola Data Nilai Santri</h3>
+                        <p class="text-xs text-slate-400">Upload Excel & Perbarui Hasil Evaluasi Belajar</p>
+                    </div>
+                </div>
+                <button onclick="closeAdminDashboard()" class="bg-slate-100 hover:bg-slate-200 text-slate-600 font-bold text-xs px-3.5 py-2 rounded-xl transition">
+                    Keluar Admin
+                </button>
+            </div>
+
+            <div class="bg-emerald-50/60 border-2 border-dashed border-emerald-300 rounded-2xl p-6 text-center space-y-3">
+                <div class="text-emerald-600 text-3xl">
+                    <i class="fa-solid fa-file-excel"></i>
+                </div>
+                <div>
+                    <h4 class="font-bold text-slate-800 text-base">Unggah Berkas Excel (.xlsx / .xls)</h4>
+                    <p class="text-xs text-slate-500 mt-0.5">Sistem akan membaca data dan mengurutkan peringkat secara otomatis.</p>
+                </div>
+                <div class="flex flex-col sm:flex-row justify-center items-center gap-3 pt-2">
+                    <label class="cursor-pointer bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs px-5 py-2.5 rounded-xl shadow transition">
+                        <span><i class="fa-solid fa-upload mr-1.5"></i> Pilih File Excel</span>
+                        <input type="file" id="excelFileInput" accept=".xlsx, .xls" onchange="processExcelUpload(event)" class="hidden">
+                    </label>
+                    <button onclick="downloadExcelTemplate()" class="bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 font-bold text-xs px-4 py-2.5 rounded-xl transition">
+                        <i class="fa-solid fa-download mr-1.5 text-emerald-600"></i> Unduh Format Excel
+                    </button>
+                </div>
+            </div>
+
+            <div class="space-y-3">
+                <div class="flex justify-between items-center">
+                    <h4 class="font-bold text-slate-800 text-sm">Daftar Data Santri Terdaftar (<span id="tableDataCount">0</span>)</h4>
+                    <button onclick="clearAllData()" class="text-rose-600 hover:text-rose-700 text-xs font-bold transition">
+                        <i class="fa-solid fa-trash mr-1"></i> Hapus Semua Data
+                    </button>
+                </div>
+
+                <div class="overflow-x-auto border border-slate-100 rounded-2xl">
+                    <table class="w-full text-left border-collapse text-xs">
+                        <thead>
+                            <tr class="bg-slate-100 text-slate-600 font-bold">
+                                <th class="p-3">Rank</th>
+                                <th class="p-3">NIS</th>
+                                <th class="p-3">Nama Santri</th>
+                                <th class="p-3">Kelas</th>
+                                <th class="p-3">Nilai</th>
+                                <th class="p-3">Benar</th>
+                                <th class="p-3">Salah</th>
+                                <th class="p-3">Aksi</th>
+                            </tr>
+                        </thead>
+                        <tbody id="adminTableBody" class="divide-y divide-slate-100">
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <!-- FOOTER -->
+    <footer class="bg-white border-t border-slate-200 py-6 text-center text-xs text-slate-400">
+        <div class="max-w-7xl mx-auto px-4">
+            <p>&copy; 2026 Pesantren Al-Matalab. Sistem Evaluasi Sains & Informasi Nilai Santri Terpadu.</p>
+        </div>
+    </footer>
+
+    <!-- JAVASCRIPT LOGIC -->
+    <script>
+        const defaultStudents = [
+            { nis: "1001", name: "Ahmad Fauzi", class: "10 A - Wustho", score: 95, correct: 19, wrong: 1, notes: "Mumtaz! Sangat memahami logika fisiologi organ.", date: "16 Sep 2026" },
+            { nis: "1002", name: "Muhammad Zaki", class: "10 A - Wustho", score: 88, correct: 17, wrong: 3, notes: "Jayyid! Pertahankan pemahaman anatomi.", date: "16 Sep 2026" },
+            { nis: "1003", name: "Siti Aminah", class: "10 B - Wustho", score: 75, correct: 15, wrong: 5, notes: "Maqbul. Perlu ditingkatkan pada materi sistem ekskresi.", date: "16 Sep 2026" },
+            { nis: "1004", name: "Bilal Ramadhan", class: "10 B - Wustho", score: 60, correct: 12, wrong: 8, notes: "Perbanyak latihan soal cerita materi ekskresi.", date: "16 Sep 2026" }
+        ];
+
+        let studentData = [];
+        const ADMIN_PASSWORD = "lidzikrillah3445";
+
+        document.addEventListener('DOMContentLoaded', () => {
+            loadStudentData();
+        });
+
+        function loadStudentData() {
+            const stored = localStorage.getItem('al_matalab_students');
+            if (stored) {
+                studentData = JSON.parse(stored);
+            } else {
+                studentData = defaultStudents;
+                saveStudentData();
+            }
+            sortAndCalculateRanks();
+            updateUI();
+        }
+
+        function saveStudentData() {
+            localStorage.setItem('al_matalab_students', JSON.stringify(studentData));
+        }
+
+        function sortAndCalculateRanks() {
+            studentData.sort((a, b) => b.score - a.score);
+            studentData.forEach((st, idx) => {
+                st.rank = idx + 1;
+            });
+        }
+
+        function updateUI() {
+            document.getElementById('totalStudentCount').innerText = `Total Santri Terdaftar: ${studentData.length} orang`;
+            document.getElementById('tableDataCount').innerText = studentData.length;
+            renderAdminTable();
+        }
+
+        function handleSearchKey(e) {
+            if (e.key === 'Enter') {
+                searchStudent();
+            }
+        }
+
+        function searchStudent() {
+            const query = document.getElementById('searchInput').value.trim().toLowerCase();
+            const resultCard = document.getElementById('resultCard');
+            const notFoundAlert = document.getElementById('notFoundAlert');
+
+            if (!query) {
+                alert("Silakan masukkan Nama atau NIS Santri terlebih dahulu.");
+                return;
+            }
+
+            const found = studentData.find(s => 
+                s.name.toLowerCase().includes(query) || s.nis.toString().toLowerCase() === query
+            );
+
+            if (found) {
+                notFoundAlert.classList.add('hidden');
+                
+                document.getElementById('resName').innerText = found.name;
+                document.getElementById('resNisClass').innerText = `NIS: ${found.nis} | Kelas: ${found.class}`;
+                document.getElementById('resRank').innerText = `#${found.rank}`;
+                document.getElementById('resTotalRank').innerText = `dari ${studentData.length} santri`;
+                document.getElementById('resScore').innerText = found.score;
+                document.getElementById('resCorrect').innerText = found.correct !== undefined ? found.correct : 0;
+                document.getElementById('resWrong').innerText = found.wrong !== undefined ? found.wrong : 0;
+                document.getElementById('resNotes').innerText = `"${found.notes || 'Tetap semangat belajar!'}"`;
+                document.getElementById('resDate').innerText = found.date || 'Terbaru';
+
+                const badge = document.getElementById('resGradeBadge');
+                if (found.score >= 85) {
+                    badge.innerText = "Predikat: Mumtaz (Sangat Baik)";
+                    badge.className = "inline-block text-xs font-bold px-3 py-1 rounded-full bg-emerald-100 text-emerald-800 mt-2";
+                } else if (found.score >= 70) {
+                    badge.innerText = "Predikat: Jayyid (Baik)";
+                    badge.className = "inline-block text-xs font-bold px-3 py-1 rounded-full bg-blue-100 text-blue-800 mt-2";
+                } else {
+                    badge.innerText = "Predikat: Maqbul (Cukup / Perlu Evaluasi)";
+                    badge.className = "inline-block text-xs font-bold px-3 py-1 rounded-full bg-amber-100 text-amber-800 mt-2";
+                }
+
+                resultCard.classList.remove('hidden');
+                resultCard.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            } else {
+                resultCard.classList.add('hidden');
+                notFoundAlert.classList.remove('hidden');
+            }
+        }
+
+        function closeResult() {
+            document.getElementById('resultCard').classList.add('hidden');
+            document.getElementById('notFoundAlert').classList.add('hidden');
+            document.getElementById('searchInput').value = '';
+        }
+
+        function openAdminModal() {
+            document.getElementById('loginModal').classList.remove('hidden');
+        }
+
+        function closeAdminModal() {
+            document.getElementById('loginModal').classList.add('hidden');
+            document.getElementById('adminPasswordInput').value = '';
+        }
+
+        function handleAdminLogin(e) {
+            e.preventDefault();
+            const pass = document.getElementById('adminPasswordInput').value;
+            if (pass === ADMIN_PASSWORD) {
+                closeAdminModal();
+                openAdminDashboard();
+            } else {
+                alert("Kata sandi admin salah! Coba lagi.");
+            }
+        }
+
+        function openAdminDashboard() {
+            document.getElementById('adminDashboardModal').classList.remove('hidden');
+            renderAdminTable();
+        }
+
+        function closeAdminDashboard() {
+            document.getElementById('adminDashboardModal').classList.add('hidden');
+        }
+
+        function renderAdminTable() {
+            const tbody = document.getElementById('adminTableBody');
+            tbody.innerHTML = '';
+
+            if (studentData.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="8" class="p-4 text-center text-slate-400 italic">Belum ada data santri. Silakan unggah berkas Excel.</td></tr>`;
+                return;
+            }
+
+            studentData.forEach((st) => {
+                const tr = document.createElement('tr');
+                tr.className = "hover:bg-slate-50 transition";
+                tr.innerHTML = `
+                    <td class="p-3 font-bold text-emerald-600">#${st.rank}</td>
+                    <td class="p-3 font-mono">${st.nis}</td>
+                    <td class="p-3 font-semibold text-slate-800">${st.name}</td>
+                    <td class="p-3 text-slate-600">${st.class}</td>
+                    <td class="p-3 font-bold text-slate-800">${st.score}</td>
+                    <td class="p-3 text-emerald-600 font-semibold">${st.correct !== undefined ? st.correct : 0}</td>
+                    <td class="p-3 text-rose-500 font-semibold">${st.wrong !== undefined ? st.wrong : 0}</td>
+                    <td class="p-3">
+                        <button onclick="deleteStudent('${st.nis}')" class="text-rose-500 hover:text-rose-700 font-bold text-xs p-1">
+                            <i class="fa-solid fa-trash-can"></i>
+                        </button>
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        function deleteStudent(nis) {
+            if (confirm(`Yakin ingin menghapus data santri dengan NIS ${nis}?`)) {
+                studentData = studentData.filter(s => s.nis.toString() !== nis.toString());
+                sortAndCalculateRanks();
+                saveStudentData();
+                updateUI();
+            }
+        }
+
+        function clearAllData() {
+            if (confirm("PERINGATAN: Apakah Anda yakin ingin menghapus SEMUA data nilai santri?")) {
+                studentData = [];
+                saveStudentData();
+                updateUI();
+            }
+        }
+
+        // --- FUNGSI PEMBACA EXCEL YANG SANGAT CERDAS & SUPER TOLERAN ---
+        function getColumnValue(row, possibleKeys, defaultValue = '') {
+            const keys = Object.keys(row);
+            for (let pk of possibleKeys) {
+                // Pencarian persis tanpa memperhatikan spasi dan huruf besar/kecil
+                const matchedKey = keys.find(k => k.toString().trim().toLowerCase() === pk.toLowerCase());
+                if (matchedKey && row[matchedKey] !== undefined && row[matchedKey] !== null) {
+                    return row[matchedKey];
+                }
+            }
+            // Jika tidak ditemukan secara persis, cari yang mengandung kata kunci tersebut
+            for (let pk of possibleKeys) {
+                const matchedKey = keys.find(k => k.toString().trim().toLowerCase().includes(pk.toLowerCase()));
+                if (matchedKey && row[matchedKey] !== undefined && row[matchedKey] !== null) {
+                    return row[matchedKey];
+                }
+            }
+            return defaultValue;
+        }
+
+        function parseNumber(val, defaultVal = 0) {
+            if (val === undefined || val === null || val === '') return defaultVal;
+            const parsed = Number(val);
+            return isNaN(parsed) ? defaultVal : parsed;
+        }
+
+        function processExcelUpload(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    const data = new Uint8Array(e.target.result);
+                    const workbook = XLSX.read(data, { type: 'array' });
+                    const firstSheetName = workbook.SheetNames[0];
+                    const worksheet = workbook.Sheets[firstSheetName];
+                    const json = XLSX.utils.sheet_to_json(worksheet, { defval: "" });
+
+                    if (json.length === 0) {
+                        alert("File Excel kosong atau format tidak sesuai!");
+                        return;
+                    }
+
+                    const formattedData = json.map((row, index) => {
+                        // Kunci pencarian super fleksibel
+                        const nisVal = getColumnValue(row, ['nis', 'no induk', 'id', 'nomor'], Math.floor(1000 + index));
+                        const nameVal = getColumnValue(row, ['nama', 'nama santri', 'santri', 'student', 'fullname'], 'Tanpa Nama');
+                        const classVal = getColumnValue(row, ['kelas', 'class', 'rombel'], 'Umum');
+                        const scoreVal = getColumnValue(row, ['nilai', 'score', 'nil', 'total'], 0);
+                        const correctVal = getColumnValue(row, ['benar', 'jumlah benar', 'jwb benar', 'jml benar', 'b', 'correct', 'right'], 0);
+                        const wrongVal = getColumnValue(row, ['salah', 'jumlah salah', 'jwb salah', 'jml salah', 's', 'wrong', 'incorrect', 'false'], 0);
+                        const notesVal = getColumnValue(row, ['catatan', 'keterangan', 'evaluasi', 'notes', 'cat'], 'Telah mengikuti evaluasi.');
+
+                        return {
+                            nis: nisVal.toString().trim(),
+                            name: nameVal.toString().trim(),
+                            class: classVal.toString().trim(),
+                            score: parseNumber(scoreVal, 0),
+                            correct: parseNumber(correctVal, 0),
+                            wrong: parseNumber(wrongVal, 0),
+                            notes: notesVal.toString().trim(),
+                            date: new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })
+                        };
+                    });
+
+                    studentData = formattedData;
+                    sortAndCalculateRanks();
+                    saveStudentData();
+                    updateUI();
+
+                    alert(`Berhasil mengimpor ${studentData.length} data santri! Kolom Benar & Salah berhasil dibaca.`);
+                    event.target.value = '';
+                } catch (err) {
+                    console.error(err);
+                    alert("Gagal membaca file Excel. Pastikan file dalam format .xlsx / .xls standar.");
+                }
+            };
+            reader.readAsArrayBuffer(file);
+        }
+
+        function downloadExcelTemplate() {
+            const templateData = [
+                { NIS: 1001, NAMA: "Ahmad Fauzi", KELAS: "10 A", NILAI: 95, BENAR: 19, SALAH: 1, CATATAN: "Mumtaz, pertahankan!" },
+                { NIS: 1002, NAMA: "Muhammad Zaki", KELAS: "10 A", NILAI: 85, BENAR: 17, SALAH: 3, CATATAN: "Sangat Baik." },
+                { NIS: 1003, NAMA: "Siti Aminah", KELAS: "10 B", NILAI: 70, BENAR: 14, SALAH: 6, CATATAN: "Tingkatkan belajar." }
+            ];
+
+            const worksheet = XLSX.utils.json_to_sheet(templateData);
+            const workbook = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(workbook, worksheet, "Format Nilai IPA");
+
+            XLSX.writeFile(workbook, "Template_Nilai_IPA_Santri.xlsx");
+        }
+    </script>
+</body>
+</html>
